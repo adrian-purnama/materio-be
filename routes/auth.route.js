@@ -9,7 +9,7 @@ const { createOtp, verifyOtp } = require('../helper/otp.helper');
 const { sendOtpEmail } = require('../helper/email.helper');
 const { validateToken, validateAdmin } = require('../helper/validate.helper');
 const { validateAndCleanEmail } = require('../helper/regex.helper');
-const { toFullImageUrl } = require('../helper/image.helper');
+const { toFullImageUrl, formatImageUrl } = require('../helper/image.helper');
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -19,7 +19,7 @@ router.get('/branding', async (req, res) => {
     if (!doc) {
         return res.status(200).json({ success: true, data: { appName: 'Stream Haven', logoUrl: '' } })
     }
-    const logoUrl = toFullImageUrl(doc.logoUrl) || ''
+    const logoUrl = formatImageUrl(doc.logoUrl) || ''
     return res.status(200).json({
         success: true,
         data: { appName: doc.appName || 'Stream Haven', logoUrl },
