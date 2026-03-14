@@ -22,7 +22,8 @@ const externalRoutes = require('./routes/external.route.js');
 
 const allowedOrigins = [
   'http://localhost:5173',   // Vite default
-  'https://materio.amfphub.com',
+  'http://materio.amfphub.com',
+  'https://materio.amfphub.com'
 ];
 
 // CORS: allow /api/external from any origin (browser calls from other apps); restrict rest to allowedOrigins
