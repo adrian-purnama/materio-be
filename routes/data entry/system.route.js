@@ -1,8 +1,15 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const systemModel = require('../../model/system.model');
 const { validateToken, validateAdmin } = require('../../helper/validate.helper');
-const { toFullImageUrl } = require('../../helper/image.helper');
+const { toFullImageUrl, deleteImageById } = require('../../helper/image.helper');
+
+function imageIdFromLogoUrl(logoUrl) {
+  if (!logoUrl || typeof logoUrl !== 'string') return null;
+  const match = logoUrl.match(/\/api\/images\/([a-f0-9]{24})/i);
+  return match ? match[1] : null;
+}
 
 router.use(validateToken);
 
@@ -30,10 +37,23 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT / – update system config (adrian only)
+// PUT / – update system config (adrian only). When logoUrl changes, deletes the old logo image.
 router.put('/', validateAdmin, async (req, res) => {
   try {
     const { appName, openRegistration, logoUrl } = req.body;
+
+    if (logoUrl !== undefined) {
+      const current = await systemModel.findOne({}).select('logoUrl').lean();
+      const oldLogoUrl = current?.logoUrl;
+      const newLogoUrl = logoUrl;
+      if (oldLogoUrl && newLogoUrl !== oldLogoUrl) {
+        const oldId = imageIdFromLogoUrl(oldLogoUrl);
+        if (oldId && mongoose.isValidObjectId(oldId)) {
+          await deleteImageById(oldId);
+        }
+      }
+    }
+
     const doc = await systemModel.findOneAndUpdate(
       {},
       {

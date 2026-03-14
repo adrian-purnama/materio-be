@@ -10,7 +10,15 @@ const PORT = process.env.PORT || 5000;
 const authRoutes = require('./routes/auth.route.js');
 const systemRoutes = require('./routes/data entry/system.route.js');
 const userRoutes = require('./routes/data entry/user.route.js');
+const unitRoutes = require('./routes/data entry/unit.route.js');
+const itemRoutes = require('./routes/data entry/item.route.js');
+const productRoutes = require('./routes/data entry/product.route.js');
+const purchaseRoutes = require('./routes/data entry/purchase.route.js');
+const soldRoutes = require('./routes/data entry/sold.route.js');
+const dashboardRoutes = require('./routes/data entry/dashboard.route.js');
+const unitModel = require('./model/unit.model');
 const imageRoutes = require('./routes/image.route.js');
+const externalRoutes = require('./routes/external.route.js');
 
 const allowedOrigins = [
     'http://localhost:5173',   // Vite default
@@ -54,9 +62,16 @@ app.get('/api/health', (req, res) => {
 mongoose.connect(process.env.MONGODB_URI, {
     dbName : "materio",
 })
-.then(()=>{
+.then(async () => {
     populateSystem()
-    console.log("MognoDB Connected")
+    // Drop legacy unique index (owner + category) so multiple unit docs per owner are allowed
+    try {
+      await unitModel.collection.dropIndex('owner_1_category_1')
+      console.log('Dropped legacy unit index owner_1_category_1')
+    } catch {
+      // Index may already be missing
+    }
+    console.log("MongoDB Connected")
 })
 .catch((err)=> (console.log(err)))
 
@@ -64,7 +79,14 @@ mongoose.connect(process.env.MONGODB_URI, {
 app.use('/auth', authRoutes)
 app.use('/api/system', systemRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/units', unitRoutes)
+app.use('/api/items', itemRoutes)
+app.use('/api/products', productRoutes)
+app.use('/api/purchases', purchaseRoutes)
+app.use('/api/sold', soldRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/images', imageRoutes)
+app.use('/api/external', externalRoutes)
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

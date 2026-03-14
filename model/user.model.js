@@ -18,6 +18,14 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    apiKey:{
+        type: String,
+        required: false
+    },
+    apiSecret:{
+        type: String,
+        required: false
+    },
     createdAt : {
         type : Date,
         default : Date.now

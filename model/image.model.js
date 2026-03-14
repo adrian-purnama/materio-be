@@ -27,6 +27,15 @@ const imageSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true,
+    },
+    isLogo: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     toJSON: { virtuals: true },
     toObject: { virtuals: true },

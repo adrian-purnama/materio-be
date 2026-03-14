@@ -1,16 +1,23 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const { Readable } = require('stream');
 
-const ImageModel = require('../model/image.model');
 const BE_LINK = process.env.BE_LINK;
+const BUCKET_NAME = 'images';
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
+function getBucket() {
+  const db = mongoose.connection.db;
+  if (!db) throw new Error('Database not connected');
+  return new mongoose.mongo.GridFSBucket(db, { bucketName: BUCKET_NAME });
+}
+
 /**
- * @param {{ buffer: Buffer, mimetype: string, originalname?: string }}
- * @returns {Promise<{ id: string, urlPath: string }>}
+ * @param {{ buffer: Buffer, mimetype: string, originalname?: string, owner?: mongoose.Types.ObjectId, isLogo?: boolean }}
+ * @returns {Promise<{ id: string, urlPath: string, url: string }>}
  */
-async function createImage({ buffer, mimetype, originalname = '' }) {
+async function createImage({ buffer, mimetype, originalname = '', owner, isLogo = false }) {
   if (!buffer || !Buffer.isBuffer(buffer)) {
     throw new Error('Invalid image data');
   }
@@ -21,36 +28,78 @@ async function createImage({ buffer, mimetype, originalname = '' }) {
     throw new Error(`Image too large. Max ${MAX_SIZE_BYTES / 1024 / 1024}MB`);
   }
 
-  const doc = await ImageModel.create({
-    data: buffer,
+  const bucket = getBucket();
+  const id = new mongoose.mongo.ObjectId();
+  const filename = originalname || 'image';
+  const uploadStream = bucket.openUploadStreamWithId(id, filename, {
     contentType: mimetype,
-    filename: originalname,
-    size: buffer.length,
+    metadata: {
+      owner: owner ? owner.toString() : undefined,
+      isLogo: !!isLogo,
+    },
   });
 
-  const path = `/api/images/${doc._id}`;
-  return { id: doc._id.toString(), urlPath: path, url: formatImageUrl(path) };
+  const readable = Readable.from(buffer);
+  readable.pipe(uploadStream);
+  await new Promise((resolve, reject) => {
+    uploadStream.on('finish', resolve);
+    uploadStream.on('error', reject);
+    readable.on('error', reject);
+  });
+
+  const path = `/api/images/${id}`;
+  return { id: id.toString(), urlPath: path, url: formatImageUrl(path) };
 }
 
 /**
  * @param {string} id - MongoDB ObjectId string
- * @returns {Promise<{ data: Buffer, contentType: string } | null>}
+ * @returns {Promise<{ contentType: string, isLogo: boolean, owner?: string } | null>}
  */
-async function getImageById(id) {
+async function getImageMetadata(id) {
   if (!id || !mongoose.isValidObjectId(id)) return null;
-  const doc = await ImageModel.findById(id).select('data contentType');
-  if (!doc || !doc.data) return null;
-  const data = Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data);
-  return { data, contentType: doc.contentType || 'application/octet-stream' };
+  const db = mongoose.connection.db;
+  if (!db) return null;
+  const doc = await db.collection(`${BUCKET_NAME}.files`).findOne({ _id: new mongoose.mongo.ObjectId(id) });
+  if (!doc) return null;
+  const meta = doc.metadata || {};
+  return {
+    contentType: doc.contentType || 'application/octet-stream',
+    isLogo: meta.isLogo === true,
+    owner: meta.owner,
+  };
 }
 
 /**
  * @param {string} id - MongoDB ObjectId string
- * @returns {Promise<boolean>} true if deleted
+ * @returns {Promise<{ stream: import('stream').Readable, contentType: string } | null>}
+ */
+async function getImageStream(id) {
+  if (!id || !mongoose.isValidObjectId(id)) return null;
+  const db = mongoose.connection.db;
+  if (!db) return null;
+  const doc = await db.collection(`${BUCKET_NAME}.files`).findOne({ _id: new mongoose.mongo.ObjectId(id) });
+  if (!doc) return null;
+  const bucket = getBucket();
+  const stream = bucket.openDownloadStream(new mongoose.mongo.ObjectId(id));
+  return {
+    stream,
+    contentType: doc.contentType || 'application/octet-stream',
+  };
+}
+
+/**
+ * @param {string} id - MongoDB ObjectId string
+ * @returns {Promise<boolean>} true if delete was performed (or file already missing)
  */
 async function deleteImageById(id) {
-  const result = await ImageModel.findByIdAndDelete(id);
-  return !!result;
+  if (!id || !mongoose.isValidObjectId(id)) return false;
+  try {
+    const bucket = getBucket();
+    await bucket.delete(new mongoose.mongo.ObjectId(id));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function formatImageUrl(path) {
@@ -65,7 +114,8 @@ function toFullImageUrl(value) {
 
 module.exports = {
   createImage,
-  getImageById,
+  getImageMetadata,
+  getImageStream,
   deleteImageById,
   formatImageUrl,
   toFullImageUrl,

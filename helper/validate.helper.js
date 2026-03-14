@@ -66,4 +66,59 @@ const validateAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { validateToken, validateAdmin };
+/**
+ * Optional auth: if valid JWT present, returns the user's _id; otherwise null.
+ * Does not send any response. Use for routes that allow both public and authenticated access.
+ * @param {import('express').Request} req
+ * @returns {Promise<import('mongoose').Types.ObjectId | null>}
+ */
+async function getUserIdFromRequest(req) {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
+    if (!token) return null;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userModel.findById(decoded.id);
+    if (!user || !user.isActive) return null;
+    return user._id;
+  } catch {
+    return null;
+  }
+}
+
+async function validateApiKey(req, res, next) {
+  const apiKey = req.headers['x-api-key'];
+  const apiSecret = req.headers['x-api-secret'];
+  if (!apiKey) {
+    return res.status(401).json({
+      success: false,
+      message: 'API key is required.',
+    });
+  }
+  if (!apiSecret) {
+    return res.status(401).json({
+      success: false,
+      message: 'API secret is required.',
+    });
+  }
+  const user = await userModel.findOne({ apiKey });
+  if (!user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid API key.',
+    });
+  }
+  if (user.apiSecret !== apiSecret) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid API secret.',
+    });
+  }
+  req.user = user;
+  req.userId = user._id;
+  next();
+}
+
+module.exports = { validateToken, validateAdmin, getUserIdFromRequest, validateApiKey };
