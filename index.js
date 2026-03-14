@@ -21,19 +21,24 @@ const imageRoutes = require('./routes/image.route.js');
 const externalRoutes = require('./routes/external.route.js');
 
 const allowedOrigins = [
-    'http://localhost:5173',   // Vite default
-    'https://event-tracker.amfphub.com'
-  ];
-  
-  app.use(cors({
+  'http://localhost:5173',   // Vite default
+  'https://materio.amfphub.com',
+];
+
+// CORS: allow /api/external from any origin (browser calls from other apps); restrict rest to allowedOrigins
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/external')) {
+    return cors({ origin: true })(req, res, next);
+  }
+  return cors({
     origin: function (origin, callback) {
       if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+        return callback(null, true);
       }
+      callback(new Error('Not allowed by CORS'));
     },
-  }))
+  })(req, res, next);
+});
 
 
 app.use(express.json());
