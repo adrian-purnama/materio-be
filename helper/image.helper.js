@@ -103,7 +103,7 @@ async function deleteImageById(id) {
 }
 
 function formatImageUrl(path) {
-  console.lof(`format function callerd ${BE_LINK}${path}`)
+  console.log(`format function callerd ${BE_LINK}${path}`)
   return `${BE_LINK}${path}`;
 }
 
