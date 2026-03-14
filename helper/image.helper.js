@@ -4,8 +4,8 @@ const { Readable } = require('stream');
 
 // In production, set BE_LINK to your public backend URL (e.g. https://api.materio.example.com).
 // Otherwise image URLs in API responses will be wrong (e.g. localhost or relative).
-const BE_LINK = process.env.BE_LINK || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000');
-const BUCKET_NAME = 'images';
+// const BE_LINK = process.env.BE_LINK || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000');
+const BE_LINK = "https://test"
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
