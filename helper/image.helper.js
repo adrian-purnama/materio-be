@@ -2,10 +2,8 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const { Readable } = require('stream');
 
-// In production, set BE_LINK to your public backend URL (e.g. https://api.materio.example.com).
-// Otherwise image URLs in API responses will be wrong (e.g. localhost or relative).
-// const BE_LINK = process.env.BE_LINK || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000');
-const BE_LINK = "https://test"
+const BE_LINK = process.env.BE_LINK;
+const BUCKET_NAME = 'images';
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -105,10 +103,8 @@ async function deleteImageById(id) {
 }
 
 function formatImageUrl(path) {
-  if (!path) return path;
-  if (BE_LINK) return `${BE_LINK}${path}`;
-  // Production without BE_LINK: return path only (relative); set BE_LINK for correct absolute URLs.
-  return path;
+  console.lof(`format function callerd ${BE_LINK}${path}`)
+  return `${BE_LINK}${path}`;
 }
 
 /** If value is a path (starts with /), return full URL; otherwise return as-is. */
