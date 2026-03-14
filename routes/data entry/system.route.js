@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const systemModel = require('../../model/system.model');
 const { validateToken, validateAdmin } = require('../../helper/validate.helper');
-const { toFullImageUrl, deleteImageById } = require('../../helper/image.helper');
+const { toFullImageUrl, deleteImageById, logoUrlToPath } = require('../../helper/image.helper');
 
 function imageIdFromLogoUrl(logoUrl) {
   if (!logoUrl || typeof logoUrl !== 'string') return null;
@@ -45,8 +45,8 @@ router.put('/', validateAdmin, async (req, res) => {
     if (logoUrl !== undefined) {
       const current = await systemModel.findOne({}).select('logoUrl').lean();
       const oldLogoUrl = current?.logoUrl;
-      const newLogoUrl = logoUrl;
-      if (oldLogoUrl && newLogoUrl !== oldLogoUrl) {
+      const newLogoPath = logoUrlToPath(logoUrl);
+      if (oldLogoUrl && newLogoPath !== oldLogoUrl) {
         const oldId = imageIdFromLogoUrl(oldLogoUrl);
         if (oldId && mongoose.isValidObjectId(oldId)) {
           await deleteImageById(oldId);
@@ -59,7 +59,7 @@ router.put('/', validateAdmin, async (req, res) => {
       {
         ...(appName !== undefined && { appName }),
         ...(openRegistration !== undefined && { openRegistration }),
-        ...(logoUrl !== undefined && { logoUrl }),
+        ...(logoUrl !== undefined && { logoUrl: logoUrlToPath(logoUrl) }),
       },
       { new: true, runValidators: true }
     );

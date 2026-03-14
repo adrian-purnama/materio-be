@@ -9,20 +9,20 @@ const { createOtp, verifyOtp } = require('../helper/otp.helper');
 const { sendOtpEmail } = require('../helper/email.helper');
 const { validateToken, validateAdmin } = require('../helper/validate.helper');
 const { validateAndCleanEmail } = require('../helper/regex.helper');
-const { toFullImageUrl, formatImageUrl } = require('../helper/image.helper');
+const { toFullImageUrl } = require('../helper/image.helper');
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
-// Public: branding (logo, app name) for the frontend – logoUrl is full URL
+// Public: branding (logo, app name) – DB stores path e.g. /api/images/:id; we return full URL (BE_LINK + path)
 router.get('/branding', async (req, res) => {
     const doc = await system.findOne({}).select('appName logoUrl').lean()
     if (!doc) {
-        return res.status(200).json({ success: true, data: { appName: 'Stream Haven', logoUrl: '' } })
+        return res.status(200).json({ success: true, data: { appName: 'Materio', logoUrl: '' } })
     }
-    const logoUrl = formatImageUrl(doc.logoUrl) || ''
+    const logoUrl = toFullImageUrl(doc.logoUrl) || ''
     return res.status(200).json({
         success: true,
-        data: { appName: doc.appName || 'Stream Haven', logoUrl },
+        data: { appName: doc.appName || 'Materio', logoUrl },
     })
 })
 

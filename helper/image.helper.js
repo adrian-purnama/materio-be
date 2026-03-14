@@ -103,14 +103,22 @@ async function deleteImageById(id) {
 }
 
 function formatImageUrl(path) {
-  console.log(`format function callerd ${BE_LINK}${path}`)
+  if (!BE_LINK) return path || '';
   return `${BE_LINK}${path}`;
 }
 
-/** If value is a path (starts with /), return full URL; otherwise return as-is. */
+/** If value is a path (starts with /), return full URL (BE_LINK + path); otherwise return as-is. */
 function toFullImageUrl(value) {
   if (!value || typeof value !== 'string') return value;
   return value.startsWith('/') ? formatImageUrl(value) : value;
+}
+
+/** Normalize logoUrl to storage form: always just the path, e.g. /api/images/:id */
+function logoUrlToPath(logoUrl) {
+  if (!logoUrl || typeof logoUrl !== 'string') return logoUrl || '';
+  const idx = logoUrl.indexOf('/api/images/');
+  if (idx !== -1) return logoUrl.slice(idx);
+  return logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`;
 }
 
 module.exports = {
@@ -120,4 +128,5 @@ module.exports = {
   deleteImageById,
   formatImageUrl,
   toFullImageUrl,
+  logoUrlToPath,
 };
